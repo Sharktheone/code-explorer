@@ -1,0 +1,18 @@
+[package]
+name = "code-explorer"
+version = "0.1.0"
+default-run = "code-explorer"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+code-explorer-core = { path = "../core" }
+code-explorer-git = { path = "../git" }
+dirs.workspace = true
+rfd.workspace = true
+slint.workspace = true
+
+[build-dependencies]
+slint-build = "1.14"
