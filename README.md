@@ -2,6 +2,8 @@
 
 Code Explorer is a Rust desktop app for indexing a local code directory or public HTTPS Git repository and visualizing where code volume lives.
 
+![Code Explorer screenshot](screenshots/code-explorer.png)
+
 ## Features
 
 - Slint desktop UI.
