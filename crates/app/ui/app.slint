@@ -126,6 +126,8 @@ export component AppWindow inherits Window {
     callback subdir-limit-changed(float);
     callback enter-directory(string);
     callback go-up();
+    callback exclude-language(string);
+    callback exclude-dir(string);
 
     // Top toolbar
     HorizontalLayout {
@@ -175,6 +177,16 @@ export component AppWindow inherits Window {
                     height: parent.height;
                     width: max(1px, segment.percent * (parent.width / 100));
                     background: segment.color;
+                    TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                        mouse-cursor: pointer;
+                        pointer-event(event) => {
+                            if event.button == PointerEventButton.right && event.kind == PointerEventKind.up {
+                                root.exclude-language(segment.name);
+                            }
+                        }
+                    }
                     Tooltip { text: @markdown("\{segment.tooltip}"); }
                 }
             }
@@ -185,22 +197,36 @@ export component AppWindow inherits Window {
             width: parent.width - 20px;
             height: 24px;
             spacing: 18px;
-            for segment in root.language-segments: HorizontalLayout {
-                spacing: 6px;
+            for segment in root.language-segments: Rectangle {
+                width: max(40px, label-text.preferred-width + 17px);
+                height: 24px;
+                background: transparent;
                 Rectangle {
+                    x: 0px;
+                    y: (parent.height - self.height) / 2;
                     width: 9px;
                     height: 9px;
                     border-radius: 5px;
                     background: segment.color;
-                    vertical-stretch: 0;
-                    Tooltip { text: @markdown("\{segment.tooltip}"); }
                 }
-                Text {
+                label-text := Text {
+                    x: 15px;
+                    y: (parent.height - self.preferred-height) / 2;
                     text: segment.label;
                     color: #f0f6fc;
                     font-size: 13px;
-                    Tooltip { text: @markdown("\{segment.tooltip}"); }
                 }
+                TouchArea {
+                    width: parent.width;
+                    height: parent.height;
+                    mouse-cursor: pointer;
+                    pointer-event(event) => {
+                        if event.button == PointerEventButton.right && event.kind == PointerEventKind.up {
+                            root.exclude-language(segment.name);
+                        }
+                    }
+                }
+                Tooltip { text: @markdown("\{segment.tooltip}"); }
             }
         }
     }
@@ -377,6 +403,11 @@ export component AppWindow inherits Window {
                     Tooltip { text: @markdown("\{row.tooltip}"); }
                     touch := TouchArea {
                         mouse-cursor: row.is_directory ? pointer : default;
+                        pointer-event(event) => {
+                            if row.is_directory && event.button == PointerEventButton.right && event.kind == PointerEventKind.up {
+                                root.exclude-dir(row.path);
+                            }
+                        }
                         clicked => {
                             if row.is_directory {
                                 root.enter-directory(row.path);
@@ -544,6 +575,11 @@ export component AppWindow inherits Window {
                 }
                 TouchArea {
                     mouse-cursor: pointer;
+                    pointer-event(event) => {
+                        if event.button == PointerEventButton.right && event.kind == PointerEventKind.up {
+                            root.exclude-dir(box.path);
+                        }
+                    }
                     clicked => { root.enter-directory(box.path); }
                 }
             }

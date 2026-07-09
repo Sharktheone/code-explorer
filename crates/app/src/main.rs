@@ -142,15 +142,46 @@ fn wire_callbacks(app: &AppWindow, state: Arc<Mutex<AppState>>) {
     });
 
     let weak = app.as_weak();
+    let state_for_up = state.clone();
     app.on_go_up(move || {
         if let Some(app) = weak.upgrade() {
-            let mut state = state.lock().unwrap();
+            let mut state = state_for_up.lock().unwrap();
             if let (Some(root), Some(current)) = (&state.root_path, &state.current_path) {
                 if current != root {
                     state.current_path = current.parent().map(PathBuf::from);
                 }
             }
             render(&app, &state);
+        }
+    });
+
+    let weak = app.as_weak();
+    let state_for_exclude_language = state.clone();
+    app.on_exclude_language(move |language| {
+        if let Some(app) = weak.upgrade() {
+            if append_filter_value(&app.get_exclude_languages(), language.as_str())
+                .map(|value| {
+                    app.set_exclude_languages(value.into());
+                })
+                .is_some()
+            {
+                rescan_from_state(&app, state_for_exclude_language.clone());
+            }
+        }
+    });
+
+    let weak = app.as_weak();
+    let state_for_exclude_dir = state.clone();
+    app.on_exclude_dir(move |path| {
+        if let Some(app) = weak.upgrade() {
+            if append_filter_value(&app.get_exclude_dirs(), path.as_str())
+                .map(|value| {
+                    app.set_exclude_dirs(value.into());
+                })
+                .is_some()
+            {
+                rescan_from_state(&app, state_for_exclude_dir.clone());
+            }
         }
     });
 }
@@ -483,9 +514,9 @@ fn filters_from_app(app: &AppWindow) -> ScanFilters {
     ScanFilters {
         include_extensions: split_filter_list(app.get_include_extensions().as_str()),
         exclude_extensions: split_filter_list(app.get_exclude_extensions().as_str()),
-        include_languages: split_filter_list(app.get_include_languages().as_str()),
-        exclude_languages: split_filter_list(app.get_exclude_languages().as_str()),
-        exclude_dirs: split_filter_list(app.get_exclude_dirs().as_str())
+        include_languages: split_named_filter_list(app.get_include_languages().as_str()),
+        exclude_languages: split_named_filter_list(app.get_exclude_languages().as_str()),
+        exclude_dirs: split_named_filter_list(app.get_exclude_dirs().as_str())
             .into_iter()
             .map(PathMatcher::new)
             .collect(),
@@ -503,6 +534,30 @@ fn split_filter_list(input: &str) -> Vec<String> {
         .filter(|value| !value.is_empty())
         .map(str::to_string)
         .collect()
+}
+
+fn split_named_filter_list(input: &str) -> Vec<String> {
+    input
+        .split([',', ';'])
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+fn append_filter_value(current: &str, value: &str) -> Option<String> {
+    let value = value.trim();
+    if value.is_empty() {
+        return None;
+    }
+
+    let mut values = split_named_filter_list(current);
+    if values.iter().any(|existing| existing == value) {
+        return None;
+    }
+
+    values.push(value.to_string());
+    Some(values.join(", "))
 }
 
 fn metric_from_index(index: i32) -> SizeMetric {
